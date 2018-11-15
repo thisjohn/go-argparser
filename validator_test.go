@@ -33,8 +33,8 @@ func TestNullValidator(t *testing.T) {
 	}
 
 	for k, tt := range tests {
-		pass := v.Validate(tt.val)
-		assert.True(t, pass, k)
+		err := v.Validate(tt.val)
+		assert.NoError(t, err, k)
 	}
 }
 
@@ -72,7 +72,11 @@ func TestRequiredValidator(t *testing.T) {
 	}
 
 	for k, tt := range tests {
-		pass := v.Validate(tt.val)
-		assert.Equal(t, tt.expectedPass, pass, k)
+		err := v.Validate(tt.val)
+		if tt.expectedPass {
+			assert.NoError(t, err, k)
+		} else {
+			assert.Error(t, err, k)
+		}
 	}
 }

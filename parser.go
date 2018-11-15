@@ -25,8 +25,11 @@ func NewArgParser() *ArgParser {
 }
 
 func newArgParserWithName(name string) *ArgParser {
+	flagset := flag.NewFlagSet(name, flag.ContinueOnError)
+	flagset.SetOutput(&nullWriter{})
+
 	return &ArgParser{
-		flagSet: flag.NewFlagSet(name, flag.PanicOnError),
+		flagSet: flagset,
 		metaMap: map[string]*meta{},
 	}
 }
@@ -80,22 +83,6 @@ func (p *ArgParser) Parse() error {
 }
 
 func (p *ArgParser) parseWithArgs(args ...string) (err error) {
-	// Handle and return panic error
-	defer func() {
-		if r := recover(); r != nil {
-			//fmt.Println(r)
-
-			switch x := r.(type) {
-			case string:
-				err = errors.New(x)
-			case error:
-				err = x
-			default:
-				err = errors.New("Unknown panic")
-			}
-		}
-	}()
-
 	if err = p.flagSet.Parse(args); err != nil {
 		return
 	}
@@ -106,11 +93,17 @@ func (p *ArgParser) parseWithArgs(args ...string) (err error) {
 
 func (p *ArgParser) validate() error {
 	for _, v := range p.metaMap {
-		if pass := v.options.validator.Validate(v.valPtr); !pass {
-			msg := fmt.Sprintf("flag validate failed: %s", v.name)
+		if err := v.options.validator.Validate(v.valPtr); err != nil {
+			msg := fmt.Sprintf("%s: %s", err, v.name)
 			return errors.New(msg)
 		}
 	}
 
 	return nil
+}
+
+type nullWriter struct{}
+
+func (w *nullWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
 }

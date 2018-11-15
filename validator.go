@@ -1,47 +1,57 @@
 package argparser // import "github.com/thisjohn/go-argparser"
+import (
+	"errors"
+)
 
 var nullValidator = &nullArgValidator{} // Default validator
 var requiredValidator = &requiredArgValidator{}
 
 // ArgValidator is an interface to validate arg value
 type ArgValidator interface {
-	Validate(val interface{}) bool
+	Validate(val interface{}) error
 }
 
 type nullArgValidator struct {
 }
 
 // Validate implements the interface of `ArgValidator`
-func (v *nullArgValidator) Validate(val interface{}) bool {
+func (v *nullArgValidator) Validate(val interface{}) error {
 	// Always pass
-	return true
+	return nil
 }
 
 type requiredArgValidator struct {
 }
 
 // Validate implements the interface of `ArgValidator`
-func (v *requiredArgValidator) Validate(val interface{}) bool {
+func (v *requiredArgValidator) Validate(val interface{}) error {
 	switch ptr := val.(type) {
 	// don't care
 	case bool:
-		return true
+		return nil
 	case *bool:
-		return true
+		return nil
 
-		// int cannot be zero
+	// int cannot be zero
 	case int:
-		return ptr != 0
+		if ptr != 0 {
+			return nil
+		}
 	case *int:
-		return *ptr != 0
+		if *ptr != 0 {
+			return nil
+		}
 
-		// string cannot be empty
+	// string cannot be empty
 	case string:
-		return ptr != ""
+		if ptr != "" {
+			return nil
+		}
 	case *string:
-		return *ptr != ""
+		if *ptr != "" {
+			return nil
+		}
 	}
 
-	// Unknown types
-	return false
+	return errors.New("val is required")
 }
