@@ -5,18 +5,24 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type meta struct {
-	valPtr  interface{}
-	name    string
-	options *options
+	valPtr interface{}
+	name   string
+	ops    *options
 }
 
-// ArgParser wraps `flag.FlagSet` and able to pass arg validator
+func (m *meta) flag() string {
+	return "-" + m.name
+}
+
+// ArgParser wraps `flag.FlagSet`
 type ArgParser struct {
+	name    string
 	flagSet *flag.FlagSet
-	metaMap map[string]*meta
+	metas   []*meta
 }
 
 // NewArgParser creates `ArgParser`
@@ -29,21 +35,50 @@ func newArgParserWithName(name string) *ArgParser {
 	flagset.SetOutput(&nullWriter{}) // Output nothing
 
 	return &ArgParser{
+		name:    name,
 		flagSet: flagset,
-		metaMap: map[string]*meta{},
+		metas:   []*meta{},
 	}
 }
 
-// Usage prints err if any and help message
+// Usage prints help message and err if any
 func (p *ArgParser) Usage(anyErr error) {
+	// Set output to stderr
+	oriOutput := p.flagSet.Output()
+	output := os.Stderr
+	p.flagSet.SetOutput(output)
+
+	// Print error
 	if anyErr != nil {
-		fmt.Fprintln(os.Stderr, anyErr.Error())
+		fmt.Fprintln(output, anyErr.Error())
 	}
 
-	output := p.flagSet.Output()
-	p.flagSet.SetOutput(os.Stderr)
-	p.flagSet.Usage()
-	p.flagSet.SetOutput(output) // Restore output
+	// Print usage
+	var requiredFlags []string
+	for _, v := range p.metas {
+		if v.ops.required {
+			flagText := v.flag()
+			if _, ok := v.valPtr.(*bool); !ok {
+				flagText = fmt.Sprintf("%s <%s>", flagText, v.ops.usage)
+			}
+			requiredFlags = append(requiredFlags, flagText)
+		}
+	}
+	fmt.Fprintf(output, "Usage: %s %s%s\n",
+		p.name,
+		strings.Join(requiredFlags, " "),
+		func() string { // has more options?
+			if len(p.metas) > len(requiredFlags) {
+				return " [...]"
+			}
+			return ""
+		}(),
+	)
+
+	p.flagSet.PrintDefaults()
+
+	// Restore output
+	p.flagSet.SetOutput(oriOutput)
 }
 
 // AddArgument defines how arg be parsed
@@ -52,6 +87,7 @@ func (p *ArgParser) Usage(anyErr error) {
 func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Setter) error {
 	// Default options
 	ops := &options{
+		usage:     p.defaultArgUsage(valPtr),
 		validator: nullValidator,
 	}
 	for _, setter := range setters {
@@ -60,7 +96,7 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 
 	usage := ops.usage
 	if ops.required {
-		usage = "(required) " + usage
+		usage = "(Required) " + usage
 	}
 
 	switch ptr := valPtr.(type) {
@@ -96,9 +132,23 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 		return errors.New("Unknown type of valPtr")
 	}
 
-	p.metaMap[name] = &meta{valPtr: valPtr, name: name, options: ops}
+	p.metas = append(p.metas, &meta{valPtr: valPtr, name: name, ops: ops})
 
 	return nil
+}
+
+func (p *ArgParser) defaultArgUsage(valPtr interface{}) string {
+	switch valPtr.(type) {
+	case *bool:
+		return "somebool"
+	case *int:
+		return "someint"
+	case *float64:
+		return "somefloat"
+	case *string:
+		return "somestring"
+	}
+	return "something"
 }
 
 // Parse command line args
@@ -116,15 +166,19 @@ func (p *ArgParser) parseWithArgs(args ...string) (err error) {
 }
 
 func (p *ArgParser) validate() error {
-	for _, v := range p.metaMap {
-		if err := v.options.validator.Validate(v.valPtr); err != nil {
-			msg := fmt.Sprintf("%s: %s", err, v.name)
+	for _, v := range p.metas {
+		if err := v.ops.validator.Validate(v.valPtr); err != nil {
+			msg := fmt.Sprintf("%s: %s", err, v.flag())
 			return errors.New(msg)
 		}
 	}
 
 	return nil
 }
+
+// ----------------
+//  Null io.Writer
+// ----------------
 
 type nullWriter struct{}
 

@@ -3,6 +3,7 @@ package argparser // import "github.com/thisjohn/go-argparser"
 type options struct {
 	defaultVal interface{}
 	usage      string
+	required   bool
 	validator  ArgValidator
 }
 
@@ -25,7 +26,10 @@ func Usage(usage string) Setter {
 
 // Required set requiredValidator
 func Required() Setter {
-	return Validator(requiredValidator)
+	return func(args *options) {
+		args.required = true
+		Validator(requiredValidator)(args)
+	}
 }
 
 // Validator set validator
