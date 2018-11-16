@@ -48,7 +48,7 @@ func (p *ArgParser) Usage(anyErr error) {
 
 // AddArgument defines how arg be parsed
 //
-// valPtr support bool, int, and string
+// valPtr support bool, int, float, and string
 func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Setter) error {
 	// Default options
 	ops := &options{
@@ -58,27 +58,39 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 		setter(ops)
 	}
 
+	usage := ops.usage
+	if ops.required {
+		usage = "(required) " + usage
+	}
+
 	switch ptr := valPtr.(type) {
 	case *bool:
 		dv, ok := ops.defaultVal.(bool)
 		if !ok {
 			dv = false
 		}
-		p.flagSet.BoolVar(ptr, name, dv, ops.usage)
+		p.flagSet.BoolVar(ptr, name, dv, usage)
 
 	case *int:
 		dv, ok := ops.defaultVal.(int)
 		if !ok {
 			dv = 0
 		}
-		p.flagSet.IntVar(ptr, name, dv, ops.usage)
+		p.flagSet.IntVar(ptr, name, dv, usage)
+
+	case *float64:
+		dv, ok := ops.defaultVal.(float64)
+		if !ok {
+			dv = 0.0
+		}
+		p.flagSet.Float64Var(ptr, name, dv, usage)
 
 	case *string:
 		dv, ok := ops.defaultVal.(string)
 		if !ok {
 			dv = ""
 		}
-		p.flagSet.StringVar(ptr, name, dv, ops.usage)
+		p.flagSet.StringVar(ptr, name, dv, usage)
 
 	default:
 		return errors.New("Unknown type of valPtr")

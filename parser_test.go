@@ -97,6 +97,57 @@ func TestArgParser_Int(t *testing.T) {
 	}
 }
 
+func TestArgParser_Float(t *testing.T) {
+	// Prepare
+	testcases := map[string]struct {
+		cmdLine          string
+		options          []Setter
+		expectedParseErr bool
+		expectedVal      float64
+	}{
+		"empty float flag": {
+			cmdLine:     "",
+			expectedVal: 0.0,
+		},
+		"float flag": {
+			cmdLine:     "-f 3.7",
+			expectedVal: 3.7,
+		},
+		"default float flag": {
+			cmdLine: "",
+			options: []Setter{
+				DefaultVal(6.1),
+			},
+			expectedVal: 6.1,
+		},
+		"required float flag": {
+			cmdLine: "",
+			options: []Setter{
+				Required(),
+			},
+			expectedParseErr: true,
+		},
+	}
+
+	// Act
+	for k, testcase := range testcases {
+		var val float64
+		parser := newArgParserWithName("somename")
+		parser.AddArgument(&val, "f", testcase.options...)
+
+		err := parser.parseWithArgs(strings.Split(testcase.cmdLine, " ")...)
+
+		// Assert
+		assrt := assert.New(t)
+		if testcase.expectedParseErr {
+			assrt.Error(err, k)
+		} else {
+			assrt.NoError(err, k)
+		}
+		assrt.Equal(testcase.expectedVal, val, k)
+	}
+}
+
 func TestArgParser_String(t *testing.T) {
 	// Prepare
 	testcases := map[string]struct {

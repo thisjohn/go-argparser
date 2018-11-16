@@ -32,12 +32,20 @@ func (v *requiredArgValidator) Validate(val interface{}) error {
 	case *bool:
 		return nil
 
-	// int cannot be zero
+	// number cannot be zero
 	case int:
 		if ptr != 0 {
 			return nil
 		}
 	case *int:
+		if *ptr != 0 {
+			return nil
+		}
+	case float64:
+		if ptr != 0 {
+			return nil
+		}
+	case *float64:
 		if *ptr != 0 {
 			return nil
 		}
