@@ -26,12 +26,24 @@ func NewArgParser() *ArgParser {
 
 func newArgParserWithName(name string) *ArgParser {
 	flagset := flag.NewFlagSet(name, flag.ContinueOnError)
-	flagset.SetOutput(&nullWriter{})
+	flagset.SetOutput(&nullWriter{}) // Output nothing
 
 	return &ArgParser{
 		flagSet: flagset,
 		metaMap: map[string]*meta{},
 	}
+}
+
+// Usage prints err if any and help message
+func (p *ArgParser) Usage(anyErr error) {
+	if anyErr != nil {
+		fmt.Fprintln(os.Stderr, anyErr.Error())
+	}
+
+	output := p.flagSet.Output()
+	p.flagSet.SetOutput(os.Stderr)
+	p.flagSet.Usage()
+	p.flagSet.SetOutput(output) // Restore output
 }
 
 // AddArgument defines how arg be parsed

@@ -25,9 +25,7 @@ func Usage(usage string) Setter {
 
 // Required set requiredValidator
 func Required() Setter {
-	return func(args *options) {
-		args.validator = requiredValidator
-	}
+	return Validator(requiredValidator)
 }
 
 // Validator set validator
