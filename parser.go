@@ -59,7 +59,7 @@ func (p *ArgParser) Usage(anyErr error) {
 		if v.ops.required {
 			flagText := v.flag()
 			if _, ok := v.valPtr.(*bool); !ok {
-				flagText = fmt.Sprintf("%s <%s>", flagText, v.ops.usage)
+				flagText = fmt.Sprintf("%s <%s>", flagText, v.ops.shortDescription)
 			}
 			requiredFlags = append(requiredFlags, flagText)
 		}
@@ -87,8 +87,8 @@ func (p *ArgParser) Usage(anyErr error) {
 func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Setter) error {
 	// Default options
 	ops := &options{
-		usage:     p.defaultArgUsage(valPtr),
-		validator: nullValidator,
+		shortDescription: p.defaultShortDescription(valPtr),
+		validator:        nullValidator,
 	}
 	for _, setter := range setters {
 		setter(ops)
@@ -137,7 +137,7 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 	return nil
 }
 
-func (p *ArgParser) defaultArgUsage(valPtr interface{}) string {
+func (p *ArgParser) defaultShortDescription(valPtr interface{}) string {
 	switch valPtr.(type) {
 	case *bool:
 		return "somebool"

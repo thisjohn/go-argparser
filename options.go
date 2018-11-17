@@ -1,10 +1,11 @@
 package argparser // import "github.com/thisjohn/go-argparser"
 
 type options struct {
-	defaultVal interface{}
-	usage      string
-	required   bool
-	validator  ArgValidator
+	defaultVal       interface{}
+	shortDescription string
+	usage            string
+	required         bool
+	validator        ArgValidator
 }
 
 // Setter represents a setter function for setting options
@@ -17,7 +18,18 @@ func DefaultVal(defautVal interface{}) Setter {
 	}
 }
 
-// Usage set usage
+// ShortDescription set short description, default is type name
+// ex. Usage: ./main -c <short description>
+func ShortDescription(desc string) Setter {
+	return func(args *options) {
+		args.shortDescription = desc
+	}
+}
+
+// Usage set detailed description
+// ex. Usage: ./main -c <short description>
+//       -c string
+//       will show detailed description here
 func Usage(usage string) Setter {
 	return func(args *options) {
 		args.usage = usage
