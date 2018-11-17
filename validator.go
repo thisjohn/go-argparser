@@ -6,7 +6,7 @@ import (
 var nullValidator = &nullArgValidator{} // Default validator
 var requiredValidator = &requiredArgValidator{}
 
-// ArgValidator is an interface to validate arg value
+// ArgValidator is an interface to validate argument value
 type ArgValidator interface {
 	Validate(val interface{}) error
 }

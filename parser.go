@@ -20,9 +20,12 @@ func (m *meta) flag() string {
 
 // ArgParser wraps `flag.FlagSet`
 type ArgParser struct {
-	name    string
-	flagSet *flag.FlagSet
-	metas   []*meta
+	name         string
+	flagSet      *flag.FlagSet
+	metas        []*meta // flag arguments
+	nonFlagMetas []*meta // non-flag arguments
+
+	errors []error
 }
 
 // NewArgParser creates `ArgParser`
@@ -35,56 +38,23 @@ func newArgParserWithName(name string) *ArgParser {
 	flagset.SetOutput(&nullWriter{}) // Output nothing
 
 	return &ArgParser{
-		name:    name,
-		flagSet: flagset,
-		metas:   []*meta{},
+		name:         name,
+		flagSet:      flagset,
+		metas:        []*meta{},
+		nonFlagMetas: []*meta{},
+		errors:       []error{},
 	}
 }
 
-// Usage prints help message and err if any
-func (p *ArgParser) Usage(anyErr error) {
-	// Set output to stderr
-	oriOutput := p.flagSet.Output()
-	output := os.Stderr
-	p.flagSet.SetOutput(output)
-
-	// Print error
-	if anyErr != nil {
-		fmt.Fprintln(output, anyErr.Error())
-	}
-
-	// Print usage
-	var requiredFlags []string
-	for _, v := range p.metas {
-		if v.ops.required {
-			flagText := v.flag()
-			if _, ok := v.valPtr.(*bool); !ok {
-				flagText = fmt.Sprintf("%s <%s>", flagText, v.ops.shortDescription)
-			}
-			requiredFlags = append(requiredFlags, flagText)
-		}
-	}
-	fmt.Fprintf(output, "Usage: %s %s%s\n",
-		p.name,
-		strings.Join(requiredFlags, " "),
-		func() string { // has more options?
-			if len(p.metas) > len(requiredFlags) {
-				return " [...]"
-			}
-			return ""
-		}(),
-	)
-
-	p.flagSet.PrintDefaults()
-
-	// Restore output
-	p.flagSet.SetOutput(oriOutput)
+// EnableHelpArgument alias to `AddArgument(..., "h", Usage("Help"))`
+func (p *ArgParser) EnableHelpArgument(valPtr *bool) *ArgParser {
+	return p.AddArgument(valPtr, "h", Usage("Help"))
 }
 
-// AddArgument defines how arg be parsed
+// AddArgument defines how flag argument be parsed
 //
-// valPtr support bool, int, float, and string
-func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Setter) error {
+// valPtr support types of bool, int, float, and string
+func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Setter) *ArgParser {
 	// Default options
 	ops := &options{
 		shortDescription: p.defaultShortDescription(valPtr),
@@ -129,12 +99,29 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 		p.flagSet.StringVar(ptr, name, dv, usage)
 
 	default:
-		return errors.New("Unknown type of valPtr")
+		p.errors = append(p.errors, errors.New("Unknown type of valPtr"))
+		return p
 	}
 
 	p.metas = append(p.metas, &meta{valPtr: valPtr, name: name, ops: ops})
+	return p
+}
 
-	return nil
+// AddNonFlagArgument defines non-flag argument.
+// NOTE: Used for building usage
+func (p *ArgParser) AddNonFlagArgument(name string, usage string, required bool) *ArgParser {
+	// Default options
+	ops := &options{
+		usage:    usage,
+		required: required,
+	}
+
+	if ops.required {
+		ops.usage = "(Required) " + ops.usage
+	}
+
+	p.nonFlagMetas = append(p.nonFlagMetas, &meta{valPtr: nil, name: name, ops: ops})
+	return p
 }
 
 func (p *ArgParser) defaultShortDescription(valPtr interface{}) string {
@@ -157,16 +144,36 @@ func (p *ArgParser) Parse() error {
 }
 
 func (p *ArgParser) parseWithArgs(args ...string) (err error) {
+	if len(p.errors) > 0 {
+		return p.errors[0] // Only return the first error
+	}
+
 	if err = p.flagSet.Parse(args); err != nil {
 		return
 	}
+	if err = p.validate(); err != nil {
+		return
+	}
 
-	err = p.validate()
+	nRequiredNonFlags := func() int {
+		n := 0
+		for _, v := range p.nonFlagMetas {
+			if v.ops.required {
+				n++
+			}
+		}
+		return n
+	}()
+	if len(p.Args()) < nRequiredNonFlags {
+		err = errors.New("Insufficient number of non-flag arguments")
+		return
+	}
+
 	return
 }
 
 func (p *ArgParser) validate() error {
-	for _, v := range p.metas {
+	for _, v := range p.metas { // Validate flag arguments
 		if err := v.ops.validator.Validate(v.valPtr); err != nil {
 			msg := fmt.Sprintf("%s: %s", err, v.flag())
 			return errors.New(msg)
@@ -174,6 +181,82 @@ func (p *ArgParser) validate() error {
 	}
 
 	return nil
+}
+
+// Args returns the non-flag arguments
+func (p *ArgParser) Args() []string {
+	return p.flagSet.Args()
+}
+
+// PrintUsage and err if any
+func (p *ArgParser) PrintUsage(anyErr error) {
+	// Set output to stderr
+	oriOutput := p.flagSet.Output()
+	output := os.Stderr
+	p.flagSet.SetOutput(output)
+
+	// Print error
+	if anyErr != nil {
+		fmt.Fprintln(output, anyErr.Error())
+	}
+
+	// Print usage
+
+	// - Build texts
+	var flagTexts []string
+	var hasOptionalFlag bool
+	for _, v := range p.metas { // flag arguments
+		if v.ops.required {
+			text := v.flag()
+			if _, ok := v.valPtr.(*bool); !ok {
+				text = fmt.Sprintf("%s <%s>", text, v.ops.shortDescription)
+			}
+			flagTexts = append(flagTexts, text)
+		} else {
+			hasOptionalFlag = true
+		}
+	}
+
+	var nonFlagTexts []string
+	for _, v := range p.nonFlagMetas { // non-flag arguments
+		if v.ops.required {
+			nonFlagTexts = append(nonFlagTexts, v.name)
+		}
+	}
+
+	// - Prints
+	fmt.Fprintf(output, "Usage: %s%s%s%s\n",
+		p.name,
+		func() string {
+			leadSpace := ""
+			if len(flagTexts) > 0 {
+				leadSpace = " "
+			}
+			return leadSpace + strings.Join(flagTexts, " ")
+		}(),
+		func() string {
+			if hasOptionalFlag {
+				return " [...]"
+			}
+			return ""
+		}(),
+		func() string {
+			leadSpace := ""
+			if len(nonFlagTexts) > 0 {
+				leadSpace = " "
+			}
+			return leadSpace + strings.Join(nonFlagTexts, " ")
+		}(),
+	)
+
+	p.flagSet.PrintDefaults()
+
+	for _, v := range p.nonFlagMetas {
+		fmt.Fprintf(output, "  %s\t%s\n", v.name, v.ops.usage)
+	}
+
+	// Restore output
+	p.flagSet.SetOutput(oriOutput)
 }
 
 // ----------------

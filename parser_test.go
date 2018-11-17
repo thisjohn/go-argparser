@@ -34,8 +34,8 @@ func TestArgParser_Bool(t *testing.T) {
 	// Act
 	for k, testcase := range testcases {
 		var val bool
-		parser := newArgParserWithName("somename")
-		parser.AddArgument(&val, "b", testcase.options...)
+		parser := newArgParserWithName("somename").
+			AddArgument(&val, "b", testcase.options...)
 
 		err := parser.parseWithArgs(strings.Split(testcase.cmdLine, " ")...)
 
@@ -81,8 +81,8 @@ func TestArgParser_Int(t *testing.T) {
 	// Act
 	for k, testcase := range testcases {
 		var val int
-		parser := newArgParserWithName("somename")
-		parser.AddArgument(&val, "i", testcase.options...)
+		parser := newArgParserWithName("somename").
+			AddArgument(&val, "i", testcase.options...)
 
 		err := parser.parseWithArgs(strings.Split(testcase.cmdLine, " ")...)
 
@@ -132,8 +132,8 @@ func TestArgParser_Float(t *testing.T) {
 	// Act
 	for k, testcase := range testcases {
 		var val float64
-		parser := newArgParserWithName("somename")
-		parser.AddArgument(&val, "f", testcase.options...)
+		parser := newArgParserWithName("somename").
+			AddArgument(&val, "f", testcase.options...)
 
 		err := parser.parseWithArgs(strings.Split(testcase.cmdLine, " ")...)
 
@@ -183,8 +183,8 @@ func TestArgParser_String(t *testing.T) {
 	// Act
 	for k, testcase := range testcases {
 		var val string
-		parser := newArgParserWithName("somename")
-		parser.AddArgument(&val, "s", testcase.options...)
+		parser := newArgParserWithName("somename").
+			AddArgument(&val, "s", testcase.options...)
 
 		err := parser.parseWithArgs(strings.Split(testcase.cmdLine, " ")...)
 
