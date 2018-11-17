@@ -11,43 +11,43 @@ type options struct {
 // Setter is function for setting options
 type Setter func(*options)
 
-// DefaultVal set defaultValue
-func DefaultVal(defautVal interface{}) Setter {
+// OptDefaultVal set defaultValue
+func OptDefaultVal(defautVal interface{}) Setter {
 	return func(args *options) {
 		args.defaultVal = defautVal
 	}
 }
 
-// ShortDescription set short description, default is val type name
+// OptShortDescription set short description, default is val type name
 //
-// ex. Usage: ./main -c <short description>
-func ShortDescription(desc string) Setter {
+// ex. OptUsage: ./main -c <short description>
+func OptShortDescription(desc string) Setter {
 	return func(args *options) {
 		args.shortDescription = desc
 	}
 }
 
-// Usage set detailed description
+// OptUsage set detailed description
 //
-// ex. Usage: ./main -c <short description>
+// ex. OptUsage: ./main -c <short description>
 //       -c string
 //       will show detailed description here
-func Usage(usage string) Setter {
+func OptUsage(usage string) Setter {
 	return func(args *options) {
 		args.usage = usage
 	}
 }
 
-// Required set argument is required
-func Required() Setter {
+// OptRequired set argument is required
+func OptRequired() Setter {
 	return func(args *options) {
 		args.required = true
-		Validator(requiredValidator)(args)
+		OptValidator(requiredValidator)(args)
 	}
 }
 
-// Validator add argument validator
-func Validator(validator ArgValidator) Setter {
+// OptValidator add argument validator
+func OptValidator(validator ArgValidator) Setter {
 	return func(args *options) {
 		args.validators = append(args.validators, validator)
 	}

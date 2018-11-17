@@ -46,9 +46,9 @@ func newArgParserWithName(name string) *ArgParser {
 	}
 }
 
-// EnableHelpArgument alias to `AddArgument(..., "h", Usage("Help"))`
+// EnableHelpArgument alias to `AddArgument(..., "h", OptUsage("Help"))`
 func (p *ArgParser) EnableHelpArgument(valPtr *bool) *ArgParser {
-	return p.AddArgument(valPtr, "h", Usage("Help"))
+	return p.AddArgument(valPtr, "h", OptUsage("Help"))
 }
 
 // AddArgument defines how flag argument be parsed
@@ -66,7 +66,7 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 
 	usage := opts.usage
 	if opts.required {
-		usage = "(Required) " + usage
+		usage = "(OptRequired) " + usage
 	}
 
 	var errMsg string
@@ -127,7 +127,7 @@ func (p *ArgParser) AddNonFlagArgument(name string, usage string, required bool)
 	}
 
 	if opts.required {
-		opts.usage = "(Required) " + opts.usage
+		opts.usage = "(OptRequired) " + opts.usage
 	}
 
 	p.nonFlagMetas = append(p.nonFlagMetas, &meta{valPtr: nil, name: name, opts: opts})
@@ -237,7 +237,7 @@ func (p *ArgParser) PrintUsage(anyErr error) {
 	}
 
 	// - Prints
-	fmt.Fprintf(output, "Usage: %s%s%s%s\n",
+	fmt.Fprintf(output, "OptUsage: %s%s%s%s\n",
 		p.name,
 		func() string {
 			leadSpace := ""
