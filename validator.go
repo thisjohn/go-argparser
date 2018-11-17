@@ -25,7 +25,7 @@ type requiredArgValidator struct {
 
 // Validate implements the interface of `ArgValidator`
 func (v *requiredArgValidator) Validate(val interface{}) error {
-	switch ptr := val.(type) {
+	switch tv := val.(type) {
 	// don't care
 	case bool:
 		return nil
@@ -33,30 +33,26 @@ func (v *requiredArgValidator) Validate(val interface{}) error {
 		return nil
 
 	// number cannot be zero
-	case int:
-		if ptr != 0 {
+	case int, float64:
+		if tv != 0 {
 			return nil
 		}
 	case *int:
-		if *ptr != 0 {
-			return nil
-		}
-	case float64:
-		if ptr != 0 {
+		if *tv != 0 {
 			return nil
 		}
 	case *float64:
-		if *ptr != 0 {
+		if *tv != 0 {
 			return nil
 		}
 
 	// string cannot be empty
 	case string:
-		if ptr != "" {
+		if tv != "" {
 			return nil
 		}
 	case *string:
-		if *ptr != "" {
+		if *tv != "" {
 			return nil
 		}
 	}

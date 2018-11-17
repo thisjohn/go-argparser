@@ -69,37 +69,47 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 		usage = "(Required) " + usage
 	}
 
+	var errMsg string
 	switch ptr := valPtr.(type) {
 	case *bool:
 		dv, ok := ops.defaultVal.(bool)
-		if !ok {
-			dv = false
+		if !ok && ops.defaultVal != nil {
+			errMsg = "Type mismatch between valPtr and defaultVal"
+			break
 		}
 		p.flagSet.BoolVar(ptr, name, dv, usage)
 
 	case *int:
 		dv, ok := ops.defaultVal.(int)
-		if !ok {
-			dv = 0
+		if !ok && ops.defaultVal != nil {
+			errMsg = "Type mismatch between valPtr and defaultVal"
+			break
 		}
 		p.flagSet.IntVar(ptr, name, dv, usage)
 
 	case *float64:
 		dv, ok := ops.defaultVal.(float64)
-		if !ok {
-			dv = 0.0
+		if !ok && ops.defaultVal != nil {
+			errMsg = "Type mismatch between valPtr and defaultVal"
+			break
 		}
 		p.flagSet.Float64Var(ptr, name, dv, usage)
 
 	case *string:
 		dv, ok := ops.defaultVal.(string)
-		if !ok {
-			dv = ""
+		if !ok && ops.defaultVal != nil {
+			errMsg = "Type mismatch between valPtr and defaultVal"
+			break
 		}
 		p.flagSet.StringVar(ptr, name, dv, usage)
 
 	default:
-		p.errors = append(p.errors, errors.New("Unknown type of valPtr"))
+		errMsg = "Unknown type of valPtr"
+	}
+
+	if errMsg != "" {
+		errMsg += ": " + name
+		p.errors = append(p.errors, errors.New(errMsg))
 		return p
 	}
 

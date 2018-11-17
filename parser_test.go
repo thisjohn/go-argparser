@@ -18,11 +18,11 @@ func TestArgParser_Bool(t *testing.T) {
 			cmdLine:     "",
 			expectedVal: false,
 		},
-		"positive bool flag": {
+		"positive bool arg": {
 			cmdLine:     "-b",
 			expectedVal: true,
 		},
-		"default bool flag": {
+		"default bool": {
 			cmdLine: "",
 			options: []Setter{
 				DefaultVal(true),
@@ -58,16 +58,27 @@ func TestArgParser_Int(t *testing.T) {
 			cmdLine:     "",
 			expectedVal: 0,
 		},
-		"int flag": {
+		"int arg": {
 			cmdLine:     "-i 999",
 			expectedVal: 999,
 		},
-		"default int flag": {
+		"non-int arg": {
+			cmdLine:          "-i notanumber",
+			expectedParseErr: true,
+		},
+		"default int": {
 			cmdLine: "",
 			options: []Setter{
 				DefaultVal(777),
 			},
 			expectedVal: 777,
+		},
+		"mismatch default int": {
+			cmdLine: "",
+			options: []Setter{
+				DefaultVal("notanumber"),
+			},
+			expectedParseErr: true,
 		},
 		"required int flag": {
 			cmdLine: "",
@@ -109,16 +120,27 @@ func TestArgParser_Float(t *testing.T) {
 			cmdLine:     "",
 			expectedVal: 0.0,
 		},
-		"float flag": {
+		"float arg": {
 			cmdLine:     "-f 3.7",
 			expectedVal: 3.7,
 		},
-		"default float flag": {
+		"non-float arg": {
+			cmdLine:          "-f notafloat",
+			expectedParseErr: true,
+		},
+		"default float": {
 			cmdLine: "",
 			options: []Setter{
 				DefaultVal(6.1),
 			},
 			expectedVal: 6.1,
+		},
+		"mismatch default float": {
+			cmdLine: "",
+			options: []Setter{
+				DefaultVal("notafloat"),
+			},
+			expectedParseErr: true,
 		},
 		"required float flag": {
 			cmdLine: "",
@@ -160,11 +182,11 @@ func TestArgParser_String(t *testing.T) {
 			cmdLine:     "",
 			expectedVal: "",
 		},
-		"string flag": {
+		"string arg": {
 			cmdLine:     "-s foo",
 			expectedVal: "foo",
 		},
-		"default string flag": {
+		"default string": {
 			cmdLine: "",
 			options: []Setter{
 				DefaultVal("bar"),
