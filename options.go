@@ -5,7 +5,7 @@ type options struct {
 	shortDescription string
 	usage            string
 	required         bool
-	validator        ArgValidator
+	validators       []ArgValidator
 }
 
 // Setter is function for setting options
@@ -46,9 +46,9 @@ func Required() Setter {
 	}
 }
 
-// Validator set argument validator
+// Validator add argument validator
 func Validator(validator ArgValidator) Setter {
 	return func(args *options) {
-		args.validator = validator
+		args.validators = append(args.validators, validator)
 	}
 }

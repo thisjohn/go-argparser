@@ -11,7 +11,7 @@ import (
 type meta struct {
 	valPtr interface{}
 	name   string
-	ops    *options
+	opts   *options
 }
 
 func (m *meta) flag() string {
@@ -56,48 +56,48 @@ func (p *ArgParser) EnableHelpArgument(valPtr *bool) *ArgParser {
 // valPtr support types of bool, int, float, and string
 func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Setter) *ArgParser {
 	// Default options
-	ops := &options{
+	opts := &options{
 		shortDescription: p.defaultShortDescription(valPtr),
-		validator:        nullValidator,
+		validators:       []ArgValidator{nullValidator},
 	}
 	for _, setter := range setters {
-		setter(ops)
+		setter(opts)
 	}
 
-	usage := ops.usage
-	if ops.required {
+	usage := opts.usage
+	if opts.required {
 		usage = "(Required) " + usage
 	}
 
 	var errMsg string
 	switch ptr := valPtr.(type) {
 	case *bool:
-		dv, ok := ops.defaultVal.(bool)
-		if !ok && ops.defaultVal != nil {
+		dv, ok := opts.defaultVal.(bool)
+		if !ok && opts.defaultVal != nil {
 			errMsg = "Type mismatch between valPtr and defaultVal"
 			break
 		}
 		p.flagSet.BoolVar(ptr, name, dv, usage)
 
 	case *int:
-		dv, ok := ops.defaultVal.(int)
-		if !ok && ops.defaultVal != nil {
+		dv, ok := opts.defaultVal.(int)
+		if !ok && opts.defaultVal != nil {
 			errMsg = "Type mismatch between valPtr and defaultVal"
 			break
 		}
 		p.flagSet.IntVar(ptr, name, dv, usage)
 
 	case *float64:
-		dv, ok := ops.defaultVal.(float64)
-		if !ok && ops.defaultVal != nil {
+		dv, ok := opts.defaultVal.(float64)
+		if !ok && opts.defaultVal != nil {
 			errMsg = "Type mismatch between valPtr and defaultVal"
 			break
 		}
 		p.flagSet.Float64Var(ptr, name, dv, usage)
 
 	case *string:
-		dv, ok := ops.defaultVal.(string)
-		if !ok && ops.defaultVal != nil {
+		dv, ok := opts.defaultVal.(string)
+		if !ok && opts.defaultVal != nil {
 			errMsg = "Type mismatch between valPtr and defaultVal"
 			break
 		}
@@ -113,7 +113,7 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 		return p
 	}
 
-	p.metas = append(p.metas, &meta{valPtr: valPtr, name: name, ops: ops})
+	p.metas = append(p.metas, &meta{valPtr: valPtr, name: name, opts: opts})
 	return p
 }
 
@@ -121,16 +121,16 @@ func (p *ArgParser) AddArgument(valPtr interface{}, name string, setters ...Sett
 // NOTE: Used for building usage
 func (p *ArgParser) AddNonFlagArgument(name string, usage string, required bool) *ArgParser {
 	// Default options
-	ops := &options{
+	opts := &options{
 		usage:    usage,
 		required: required,
 	}
 
-	if ops.required {
-		ops.usage = "(Required) " + ops.usage
+	if opts.required {
+		opts.usage = "(Required) " + opts.usage
 	}
 
-	p.nonFlagMetas = append(p.nonFlagMetas, &meta{valPtr: nil, name: name, ops: ops})
+	p.nonFlagMetas = append(p.nonFlagMetas, &meta{valPtr: nil, name: name, opts: opts})
 	return p
 }
 
@@ -168,7 +168,7 @@ func (p *ArgParser) parseWithArgs(args ...string) (err error) {
 	nRequiredNonFlags := func() int {
 		n := 0
 		for _, v := range p.nonFlagMetas {
-			if v.ops.required {
+			if v.opts.required {
 				n++
 			}
 		}
@@ -184,9 +184,11 @@ func (p *ArgParser) parseWithArgs(args ...string) (err error) {
 
 func (p *ArgParser) validate() error {
 	for _, v := range p.metas { // Validate flag arguments
-		if err := v.ops.validator.Validate(v.valPtr); err != nil {
-			msg := fmt.Sprintf("%s: %s", err, v.flag())
-			return errors.New(msg)
+		for _, vd := range v.opts.validators {
+			if err := vd.Validate(v.valPtr); err != nil {
+				msg := fmt.Sprintf("%s: %s", err.Error(), v.flag())
+				return errors.New(msg)
+			}
 		}
 	}
 
@@ -216,10 +218,10 @@ func (p *ArgParser) PrintUsage(anyErr error) {
 	var flagTexts []string
 	var hasOptionalFlag bool
 	for _, v := range p.metas { // flag arguments
-		if v.ops.required {
+		if v.opts.required {
 			text := v.flag()
 			if _, ok := v.valPtr.(*bool); !ok {
-				text = fmt.Sprintf("%s <%s>", text, v.ops.shortDescription)
+				text = fmt.Sprintf("%s <%s>", text, v.opts.shortDescription)
 			}
 			flagTexts = append(flagTexts, text)
 		} else {
@@ -229,7 +231,7 @@ func (p *ArgParser) PrintUsage(anyErr error) {
 
 	var nonFlagTexts []string
 	for _, v := range p.nonFlagMetas { // non-flag arguments
-		if v.ops.required {
+		if v.opts.required {
 			nonFlagTexts = append(nonFlagTexts, v.name)
 		}
 	}
@@ -262,7 +264,7 @@ func (p *ArgParser) PrintUsage(anyErr error) {
 	p.flagSet.PrintDefaults()
 
 	for _, v := range p.nonFlagMetas {
-		fmt.Fprintf(output, "  %s\t%s\n", v.name, v.ops.usage)
+		fmt.Fprintf(output, "  %s\t%s\n", v.name, v.opts.usage)
 	}
 
 	// Restore output
