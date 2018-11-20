@@ -1,4 +1,5 @@
-package argparser // import "github.com/thisjohn/go-argparser"
+package argparser
+
 import (
 	"errors"
 )

@@ -1,4 +1,4 @@
-package argparser // import "github.com/thisjohn/go-argparser"
+package argparser
 
 type options struct {
 	defaultVal       interface{}

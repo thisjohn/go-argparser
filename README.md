@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/thisjohn/go-argparser"
+	"github.com/thisjohn/go-argparser/argparser"
 )
 
 type arguments struct {
